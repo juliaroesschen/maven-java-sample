@@ -1,0 +1,47 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    env:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}  # Add your SonarQube token in your repo secrets
+      SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}  # URL of your SonarQube server
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '11'  # Use 8 or 11 based on your project requirements
+          cache: maven
+
+      - name: Build with Maven
+        run: mvn clean compile
+
+      - name: Run Tests
+        run: mvn test
+
+      - name: SonarQube Analysis
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+        run: mvn sonar:sonar -Dsonar.login=${{ secrets.SONAR_TOKEN }} -Dsonar.host.url=${{ secrets.SONAR_HOST_URL }}
+
+      - name: Package Application
+        run: mvn package
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: java-app-artifact
+          path: target/*.jar
